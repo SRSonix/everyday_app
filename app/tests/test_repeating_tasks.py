@@ -1,10 +1,8 @@
 import uuid
 from datetime import datetime
 
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.repeating_tasks.repository import RepeatingTaskRepository
 from app.repeating_tasks.service import RepeatingTaskService
 
 
@@ -31,11 +29,8 @@ class TestRepeatingTaskEndpoint:
     def test_create_repeating_task_returns_201(
         self,
         client: TestClient,
-        app: FastAPI,
-        repeating_task_repository_mock: RepeatingTaskRepository,
     ):
         # when
-        app.dependency_overrides[RepeatingTaskRepository] = lambda: repeating_task_repository_mock
         response = client.post(
             "/repeating-tasks",
             json={"name": "Exercise", "repeats_every_days": 3},

@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 from fastapi import Depends
 
 from app.repeating_tasks.entity import RepeatingTask
-from app.repeating_tasks.repository import RepeatingTaskRepository
+from app.repeating_tasks.repository import PostgresRepeatingTaskRepository, RepeatingTaskRepository
 
 
 class RepeatingTaskService:
-    def __init__(self, repository: RepeatingTaskRepository = Depends(RepeatingTaskRepository)):
+    def __init__(self, repository: RepeatingTaskRepository = Depends(PostgresRepeatingTaskRepository)):
         self.repository = repository
 
     def add_task(self, name: str, repeats_every_days: int) -> RepeatingTask:
