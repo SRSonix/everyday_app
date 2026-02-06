@@ -1,0 +1,39 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # ty - manual hook until official one is released
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty type checker
+        entry: ty check
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.43.2
+    hooks:
+      - id: typos
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.30
+    hooks:
+      - id: uv-lock

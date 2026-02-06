@@ -1,3 +1,4 @@
+from typing import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,11 +8,12 @@ from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
-from app.app import create_app
+from app.main import create_app
 from app.config import get_db_session
 from app.repeating_tasks.models import Base, RepeatingTaskORM
 from app.repeating_tasks.repository import RepeatingTaskRepository
 from app.repeating_tasks.service import RepeatingTaskService
+
 
 @pytest.fixture(scope="session")
 def postgres_container():
@@ -31,7 +33,7 @@ def db_setup(postgres_url: str):
 
 
 @pytest.fixture
-def db_session(db_setup, postgres_url: str) -> Session:
+def db_session(db_setup, postgres_url: str) -> Iterator[Session]:
     engine = create_engine(postgres_url)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
@@ -44,8 +46,10 @@ def db_session(db_setup, postgres_url: str) -> Session:
 @pytest.fixture
 def app(db_session: Session) -> FastAPI:
     application = create_app()
+
     def override_get_db_session():
         yield db_session
+
     application.dependency_overrides[get_db_session] = override_get_db_session
     return application
 
@@ -63,5 +67,7 @@ def repeating_task_repository_mock() -> RepeatingTaskRepository:
 
 
 @pytest.fixture
-def repeating_task_service(repeating_task_repository_mock: RepeatingTaskRepository) -> RepeatingTaskService:
+def repeating_task_service(
+    repeating_task_repository_mock: RepeatingTaskRepository,
+) -> RepeatingTaskService:
     return RepeatingTaskService(repository=repeating_task_repository_mock)

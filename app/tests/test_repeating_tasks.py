@@ -7,7 +7,9 @@ from app.repeating_tasks.service import RepeatingTaskService
 
 
 class TestRepeatingTaskService:
-    def test_add_task_generates_correct_fields(self, repeating_task_service: RepeatingTaskService):
+    def test_add_task_generates_correct_fields(
+        self, repeating_task_service: RepeatingTaskService
+    ):
         # when
         result = repeating_task_service.add_task(name="Meditate", repeats_every_days=1)
 
@@ -16,7 +18,9 @@ class TestRepeatingTaskService:
         assert isinstance(result.created_at, datetime)
         assert result.last_run is None
 
-    def test_add_task_passes_correct_values(self, repeating_task_service: RepeatingTaskService):
+    def test_add_task_passes_correct_values(
+        self, repeating_task_service: RepeatingTaskService
+    ):
         # when
         result = repeating_task_service.add_task(name="Exercise", repeats_every_days=7)
 
