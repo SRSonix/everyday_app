@@ -1,10 +1,12 @@
+import uuid
 from datetime import datetime
 
 import pytest
 
-from app.repeating_tasks.entity import PaginatedResult, RepeatingTask, TaskCompletion
+from app.repeating_tasks.entity import PaginatedResult
 from app.repeating_tasks.exceptions import TaskNotFoundError
 from app.repeating_tasks.service import RepeatingTaskService
+from tests.generator import RepeatingTaskGenerator, TaskCompletionGenerator
 
 
 class TestAddTask:
@@ -15,7 +17,7 @@ class TestAddTask:
         result = repeating_task_service.add_task(name="Meditate", repeats_every_days=1)
 
         # then
-        assert len(result.id) == 36
+        assert_is_uuid(result.id)
         assert isinstance(result.created_at, datetime)
 
     def test_passes_correct_values(self, repeating_task_service: RepeatingTaskService):
@@ -34,19 +36,17 @@ class TestCompleteTask:
         repeating_task_repository_mock,
     ):
         # given
-        repeating_task_repository_mock.get_by_id.return_value = RepeatingTask(
-            id="task-123",
-            name="Exercise",
-            repeats_every_days=1,
-            created_at=datetime(2025, 1, 1),
+        task_id = "task-123"
+        repeating_task_repository_mock.get_by_id.return_value = (
+            RepeatingTaskGenerator().with_id(task_id).make()
         )
 
         # when
-        result = repeating_task_service.complete_task("task-123")
+        result = repeating_task_service.complete_task(task_id)
 
         # then
-        assert len(result.id) == 36
-        assert result.task_id == "task-123"
+        assert result.task_id == task_id
+        assert_is_uuid(result.id)
         assert isinstance(result.done_at, datetime)
 
     def test_raises_for_nonexistent_task(
@@ -64,23 +64,19 @@ class TestGetAllTasks:
         repeating_task_repository_mock,
     ):
         # given
-        task = RepeatingTask(
-            id="task-1",
-            name="Exercise",
-            repeats_every_days=3,
-            created_at=datetime(2025, 1, 1),
+        paginated_task = make_paginated(
+            [RepeatingTaskGenerator().with_repeats_every_days(3).make()]
         )
         repeating_task_repository_mock.get_all_with_last_done.return_value = (
-            PaginatedResult(items=[task], total=1, page=1, page_size=20)
+            paginated_task
         )
 
         # when
         result = repeating_task_service.get_all_tasks()
 
         # then
-        assert len(result.items) == 1
+        assert_paginated(result, expected_count=1)
         assert result.items[0].last_done_at is None
-        assert result.total == 1
 
     def test_returns_tasks_with_last_done(
         self,
@@ -88,23 +84,25 @@ class TestGetAllTasks:
         repeating_task_repository_mock,
     ):
         # given
-        task = RepeatingTask(
-            id="task-1",
-            name="Exercise",
-            repeats_every_days=3,
-            created_at=datetime(2025, 1, 1),
-            last_done_at=datetime(2025, 6, 15),
+        last_done = datetime(2025, 6, 15)
+        paginated_task = make_paginated(
+            [
+                RepeatingTaskGenerator()
+                .with_repeats_every_days(3)
+                .with_last_done_at(last_done)
+                .make()
+            ]
         )
         repeating_task_repository_mock.get_all_with_last_done.return_value = (
-            PaginatedResult(items=[task], total=1, page=1, page_size=20)
+            paginated_task
         )
 
         # when
         result = repeating_task_service.get_all_tasks()
 
         # then
-        assert len(result.items) == 1
-        assert result.items[0].last_done_at == datetime(2025, 6, 15)
+        assert_paginated(result, expected_count=1)
+        assert result.items[0].last_done_at == last_done
 
 
 class TestGetTaskCompletions:
@@ -114,26 +112,20 @@ class TestGetTaskCompletions:
         repeating_task_repository_mock,
     ):
         # given
-        repeating_task_repository_mock.get_by_id.return_value = RepeatingTask(
-            id="task-123",
-            name="Exercise",
-            repeats_every_days=1,
-            created_at=datetime(2025, 1, 1),
+        task_id = "task-123"
+        repeating_task_repository_mock.get_by_id.return_value = (
+            RepeatingTaskGenerator().with_id(task_id).make()
         )
-        completions = [
-            TaskCompletion(id="c-1", task_id="task-123", done_at=datetime(2025, 6, 15)),
-        ]
         repeating_task_repository_mock.get_completions_paginated.return_value = (
-            PaginatedResult(items=completions, total=1, page=1, page_size=20)
+            make_paginated([TaskCompletionGenerator().with_task_id(task_id).make()])
         )
 
         # when
-        result = repeating_task_service.get_task_completions("task-123")
+        result = repeating_task_service.get_task_completions(task_id)
 
         # then
-        assert len(result.items) == 1
-        assert result.items[0].task_id == "task-123"
-        assert result.total == 1
+        assert_paginated(result, expected_count=1)
+        assert result.items[0].task_id == task_id
 
     def test_raises_for_nonexistent_task(
         self, repeating_task_service: RepeatingTaskService
@@ -141,3 +133,19 @@ class TestGetTaskCompletions:
         # when / then
         with pytest.raises(TaskNotFoundError):
             repeating_task_service.get_task_completions("nonexistent-id")
+
+
+def make_paginated(items: list, page: int = 1, page_size: int = 20) -> PaginatedResult:
+    return PaginatedResult(
+        items=items, total=len(items), page=page, page_size=page_size
+    )
+
+
+# parses the string as a UUID, failing the test if it's malformed
+def assert_is_uuid(value: str) -> None:
+    uuid.UUID(value)
+
+
+def assert_paginated(result: PaginatedResult, expected_count: int) -> None:
+    assert len(result.items) == expected_count
+    assert result.total == expected_count

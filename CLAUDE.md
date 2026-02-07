@@ -26,3 +26,9 @@
 * one test class per method/endpoint being tested. class name reflects the method (e.g. `TestAddTask`, `TestGetAllRepeatingTasks`).
 * integration tests must never call other endpoints to set up data. use seed fixtures that insert directly via the db session.
 * always cover both the happy path and the primary error path (e.g. 404 for missing resource, validation rejection).
+* list endpoints must also have a test for the empty-list response.
+* use builder-pattern generator classes (e.g. `RepeatingTaskGenerator().with_name("X").make()`) in `tests/generator.py` to construct test entities.#
+* use helpers (make / create / seed and assertion) helpers to make # given and # then more readable. keep assertion helpers private to each test file.
+* only extract assertion helpers when they combine 2+ related assertions. never wrap a single assert in a helper function.
+* assertion helpers must not return values. callers extract data (e.g. `response.json()`) separately.
+* when a value appears in both `# given` and `# then`, extract it to a local constant in the test function to avoid duplicate literals.
